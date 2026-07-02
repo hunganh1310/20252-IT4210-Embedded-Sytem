@@ -1,19 +1,4 @@
-<div align="center">
 
-# 🎮 STM32F429I Tetris
-
-**Game Tetris trên STM32F429I Discovery — điều khiển bằng nút bấm hoặc cử chỉ tay**
-
-[![Platform](https://img.shields.io/badge/platform-STM32F429I--DISCO-03234B?logo=stmicroelectronics&logoColor=white)](https://www.st.com/en/evaluation-tools/32f429idiscovery.html)
-[![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS%20%7C%20CMSIS--RTOS%20v2-2ea44f)](https://www.freertos.org/)
-[![GUI](https://img.shields.io/badge/GUI-TouchGFX%204.25.0-blueviolet)](https://support.touchgfx.com/)
-[![License](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
-
-Đồ án môn học **IT4210 — Hệ thống nhúng**, học kỳ 20252
-
-[Tính năng](#-tính-năng) · [Kiến trúc](#-kiến-trúc-phần-mềm) · [Phần cứng](#-phần-cứng) · [Build](#-build--nạp) · [Tài liệu](#-tài-liệu)
-
-</div>
 
 ---
 
