@@ -1,138 +1,270 @@
-# Hướng dẫn đóng góp
+<div align="center">
 
-Tài liệu dành cho thành viên nhóm đồ án IT4210 — 20252, và cho bất kỳ ai muốn mở rộng dự án.
+# 🎮 STM32F429I Tetris
 
----
+**Game Tetris trên STM32F429I Discovery — điều khiển bằng nút bấm hoặc cử chỉ tay**
 
-## Chuẩn bị môi trường
+[![Platform](https://img.shields.io/badge/platform-STM32F429I--DISCO-03234B?logo=stmicroelectronics&logoColor=white)](https://www.st.com/en/evaluation-tools/32f429idiscovery.html)
+[![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS%20%7C%20CMSIS--RTOS%20v2-2ea44f)](https://www.freertos.org/)
+[![GUI](https://img.shields.io/badge/GUI-TouchGFX%204.25.0-blueviolet)](https://support.touchgfx.com/)
+[![License](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 
-| Công cụ | Phiên bản | Bắt buộc? |
-|---|---|---|
-| **STM32CubeIDE** | ≥ 1.17.0 | Có (hoặc IAR / Keil / arm-none-eabi-gcc) |
-| **TouchGFX Designer** | 4.25.0 | Chỉ khi sửa giao diện |
-| **STM32CubeMX** | ≥ 6.13 | Chỉ khi sửa cấu hình ngoại vi (đã tích hợp trong CubeIDE) |
-| **Git** | bất kỳ | Có |
+Đồ án môn học **IT4210 — Hệ thống nhúng**, học kỳ 20252
 
-> Phiên bản TouchGFX Designer phải **đúng 4.25.0**. Mở project bằng bản khác, Designer sẽ tự nâng cấp file `.touchgfx` và sinh ra code không tương thích với thư viện trong `Middlewares/`.
+[Tính năng](#-tính-năng) · [Kiến trúc](#-kiến-trúc-phần-mềm) · [Phần cứng](#-phần-cứng) · [Build](#-build--nạp) · [Tài liệu](#-tài-liệu)
 
----
-
-## Quy tắc quan trọng nhất: khối USER CODE
-
-Phần lớn code trong `Core/` do **STM32CubeMX sinh tự động**. Mỗi lần ai đó mở `.ioc` và bấm *Generate Code*, CubeMX ghi đè các file này và **chỉ giữ lại** phần nằm giữa các dấu mốc:
-
-```c
-/* USER CODE BEGIN 2 */
-   // code viết ở đây được giữ lại
-/* USER CODE END 2 */
-
-   // code viết ở đây SẼ BỊ XOÁ
-```
-
-**Luôn viết code trong các khối `USER CODE`.** Đây là nguyên nhân mất code phổ biến nhất trong các dự án STM32.
-
-Tương tự với TouchGFX: `TouchGFX/generated/` do Designer sinh ra — đừng sửa tay. Code của nhóm nằm ở `TouchGFX/gui/`.
+</div>
 
 ---
 
-## Style code
+## 📖 Giới thiệu
 
-Repo có [`.editorconfig`](.editorconfig); hầu hết editor sẽ tự áp dụng.
+Dự án hiện thực game Tetris trên board **STM32F429I Discovery**, với hai điểm nhấn kỹ thuật:
 
-- **Thụt lề:** 2 space (Makefile dùng tab)
-- **Độ dài dòng:** tối đa 120 ký tự
-- **Ngoặc nhọn:** theo style của code CubeMX sinh ra — mở ngoặc ở dòng mới cho hàm, cùng dòng cho khối điều khiển
-- **Đặt tên:**
-  - Hàm task: `StartTaskXX` (giữ đúng tên CubeMX sinh)
-  - Hàm helper: `camelCase` — ví dụ `updateTasksBasedOnMode()`
-  - Hằng số & macro: `UPPER_SNAKE_CASE`
-  - Driver PAJ7620: tiền tố `PAJ7620_`
-- **Comment:** tiếng Việt hoặc tiếng Anh đều được, nhưng **thống nhất trong một file**. Ưu tiên giải thích *tại sao*, không mô tả *cái gì* — dòng code đã tự nói lên điều đó.
+1. **Trừu tượng hoá nguồn điều khiển** — logic game không biết lệnh đến từ nút bấm hay từ cảm biến cử chỉ. Cả hai nguồn cùng đẩy lệnh vào một message queue chung, nên có thể đổi qua lại lúc đang chạy mà không động đến code game.
+2. **Đa nhiệm thật sự** — bốn task FreeRTOS chạy song song: render GUI, quét nút, đọc cảm biến, và điều phối chế độ. Task không dùng đến được **suspend** thay vì poll vô ích.
+
+Giao diện dựng bằng **TouchGFX** trên LCD 240×320 (ILI9341), tăng tốc phần cứng qua **LTDC + DMA2D**, framebuffer đặt trên **SDRAM** ngoài.
 
 ---
 
-## Commit
+## ✨ Tính năng
 
-Dùng [Conventional Commits](https://www.conventionalcommits.org/):
-
-```
-<type>(<scope>): <mô tả ngắn>
-```
-
-| Type | Dùng khi |
+| | |
 |---|---|
-| `feat` | Thêm tính năng |
-| `fix` | Sửa lỗi |
-| `refactor` | Đổi cấu trúc, không đổi hành vi |
-| `docs` | Chỉ sửa tài liệu |
-| `chore` | Build, gitignore, công cụ |
+| 🕹️ **Hai nguồn điều khiển** | Nút bấm vật lý hoặc cử chỉ tay, chọn ngay trong menu |
+| 👋 **Cảm biến cử chỉ PAJ7620** | Nhận 9 cử chỉ qua I²C, dự án dùng 4 |
+| 🎨 **Giao diện TouchGFX** | LCD 240×320, tăng tốc LTDC + DMA2D |
+| ⚡ **Đa nhiệm FreeRTOS** | 4 task, 2 message queue, suspend/resume động |
+| 🔀 **Chuyển chế độ nóng** | Đổi nút ↔ cử chỉ khi đang chạy, LED trên board báo chế độ |
 
-Scope gợi ý: `core`, `gui`, `paj7620`, `rtos`, `docs`, `build`.
+---
+
+## 🧩 Kiến trúc phần mềm
 
 ```
-feat(paj7620): thêm cử chỉ forward để thả khối ngay
-fix(rtos): sửa race khi chuyển chế độ lúc queue chưa rỗng
-docs(hardware): bổ sung sơ đồ điện trở kéo xuống cho nút bấm
+        ┌─────────────┐                      ┌─────────────┐
+        │  myTask03   │  nút bấm             │  myTask04   │  PAJ7620
+        │  (buttons)  │  PG2/PG3/PB12/PB13   │  (gesture)  │  qua I²C3
+        └──────┬──────┘                      └──────┬──────┘
+               │                                    │
+               │         'L' 'R' 'D' 'C'            │
+               └───────────────┬────────────────────┘
+                               ▼
+                        ╔═════════════╗
+                        ║   Queue1    ║  8 × uint8_t — lệnh điều khiển
+                        ╚══════╤══════╝
+                               ▼
+                        ┌─────────────┐
+                        │  GUI_Task   │  TouchGFX + logic Tetris
+                        └──────┬──────┘
+                               │  chọn chế độ (0 / 1)
+                               ▼
+                        ╔═════════════╗
+                        ║   Queue2    ║  8 × uint8_t — chế độ điều khiển
+                        ╚══════╤══════╝
+                               ▼
+                        ┌─────────────┐
+                        │ defaultTask │  suspend/resume Task03 ↔ Task04
+                        └──────┬──────┘  bật LED PG13 / PG14
+                               │
+                     ┌─────────┴─────────┐
+                     ▼                   ▼
+                  myTask03            myTask04
 ```
 
-### Trước khi commit — kiểm tra phạm vi thay đổi
+### Các task
+
+| Task | Vai trò |
+|---|---|
+| `GUI_Task` | Chạy vòng lặp TouchGFX, vẽ màn hình và xử lý logic Tetris. Đọc lệnh từ **Queue1**, gửi lựa chọn chế độ vào **Queue2**. |
+| `myTask03` | Quét 4 nút bấm mỗi 10 ms, đẩy lệnh vào **Queue1**. Mặc định **đang chạy**. |
+| `myTask04` | Đọc cử chỉ từ PAJ7620 mỗi 10 ms, đẩy lệnh vào **Queue1**. Mặc định **bị suspend**. |
+| `defaultTask` | Nhận chế độ từ **Queue2**, suspend/resume Task03 ↔ Task04, bật LED báo chế độ. |
+
+### Giao thức message queue
+
+**Queue1 — lệnh điều khiển** (8 phần tử, `uint8_t`). Lệnh mã hoá bằng ký tự ASCII:
+
+| Mã | Hành động |
+|:--:|---|
+| `L` | Di chuyển sang trái |
+| `R` | Di chuyển sang phải |
+| `D` | Rơi nhanh |
+| `C` | Xoay khối |
+
+Nhờ lớp mã hoá này, màn hình game chỉ đọc một byte và **không phụ thuộc** vào nguồn phát lệnh.
+
+**Queue2 — chế độ điều khiển** (8 phần tử, `uint8_t`): `0` = nút bấm (Task03), `1` = cử chỉ (Task04).
+
+### Chống lặp lệnh (auto-repeat)
+
+Cả Task03 và Task04 dùng chung một cơ chế: chỉ đẩy lệnh mới khi **Queue1 đang rỗng** (`osMessageQueueGetCount() < 1`), rồi `osDelay(400)` trước khi nhận lệnh tiếp theo. Điều này vừa chống dội nút, vừa tránh một cử chỉ kéo dài bị đọc thành hàng chục lệnh.
+
+### Luồng màn hình
+
+```
+ScreenWait  ──▶  Screen chọn chế độ  ──▶  Screen chơi Tetris
+(màn hình chờ)   (nút bấm / cử chỉ)      (đọc Queue1)
+```
+
+---
+
+## 🔧 Phần cứng
+
+### Yêu cầu
+
+- **STM32F429I-DISCO** — MCU STM32F429ZIT6, LCD 240×320 và SDRAM có sẵn trên board
+- **Cảm biến cử chỉ PAJ7620U2** — giao tiếp I²C
+- **4 nút bấm** + điện trở kéo xuống, dây nối
+
+### Cấu hình hệ thống
+
+| Thông số | Giá trị |
+|---|---|
+| Clock hệ thống | 180 MHz (HSE 8 MHz → PLL M=8, N=360, P=2) |
+| Bus APB1 / APB2 | 45 MHz / 90 MHz |
+| Flash latency | 5 wait states |
+| Timebase HAL | TIM6 (FreeRTOS chiếm SysTick) |
+
+### Sơ đồ nối dây
+
+**Cảm biến PAJ7620 → I²C3** (địa chỉ 7-bit `0x73`)
+
+| Chân sensor | Chân MCU | Ghi chú |
+|---|---|---|
+| SCL | **PA8** | `I2C3_SCL`, AF4 |
+| SDA | **PC9** | `I2C3_SDA`, AF4 |
+| VCC | 3.3 V | |
+| GND | GND | |
+
+**Nút bấm** — tất cả **active-HIGH**: nhấn → chân đọc mức `1`. Cần điện trở kéo xuống (pull-down) để mức nghỉ ổn định ở `0`.
+
+| Nút | Chân MCU | Lệnh |
+|---|---|---|
+| Trái | **PG2** | `L` |
+| Phải | **PG3** | `R` |
+| Xuống | **PB12** | `D` |
+| Xoay | **PB13** | `C` |
+
+**LED báo chế độ** (LED có sẵn trên board)
+
+| LED | Chân | Sáng khi |
+|---|---|---|
+| Xanh lá | **PG13** | Chế độ **nút bấm** |
+| Đỏ | **PG14** | Chế độ **cử chỉ** |
+
+---
+
+## 🎮 Điều khiển
+
+### Nút bấm
+
+`PG2` = trái · `PG3` = phải · `PB12` = rơi nhanh · `PB13` = xoay
+
+### Cử chỉ (PAJ7620)
+
+| Cử chỉ | Hành động |
+|---|---|
+| Vuốt sang trái | Di chuyển trái |
+| Vuốt sang phải | Di chuyển phải |
+| Vuốt xuống | Rơi nhanh |
+| Xoay cùng chiều kim đồng hồ | Xoay khối |
+
+> Driver PAJ7620 nhận đủ 9 cử chỉ (thêm *up*, *forward*, *backward*, *anticlockwise*, *wave*), nhưng game chỉ dùng 4 cử chỉ trên — các cử chỉ còn lại bị bỏ qua trong `StartTask04`.
+
+Đổi giữa hai chế độ trong **menu chọn chế độ**, quan sát LED để xác nhận.
+
+---
+
+## 🚀 Build & nạp
+
+Repo có sẵn project cho **cả bốn** toolchain — chọn một.
+
+### STM32CubeIDE (khuyến nghị)
 
 ```bash
-git status
-git diff --stat
+git clone <repository-url>
+cd 20252-IT4210-Embedded-Sytem
 ```
 
-Dự án này **đã từng mất toàn bộ thư mục `TouchGFX/`** vì một commit khai là "xoá vài file generated" nhưng thực tế xoá 182 file (xem [CHANGELOG](CHANGELOG.md)). Nếu `--stat` hiện nhiều file hơn bạn nghĩ, dừng lại và tìm hiểu tại sao trước khi commit.
+1. `File → Open Projects from File System…` → chọn thư mục `STM32CubeIDE/`
+2. Build: `Ctrl+B`
+3. Đấu nối phần cứng theo [sơ đồ trên](#sơ-đồ-nối-dây)
+4. Nạp: `Run → Debug` hoặc `Run As → STM32 C/C++ Application`
 
-Cụ thể, cẩn thận khi:
-- Chạy *Generate Code* — CubeMX/Designer có thể xoá file bạn không ngờ tới
-- Dọn thư mục build bằng tay
-- `git add .` sau khi IDE vừa chạy clean
+### Các toolchain khác
 
----
+| Toolchain | Cách mở |
+|---|---|
+| **IAR EWARM** | Mở `EWARM/Project.eww` |
+| **Keil MDK-ARM** | Mở `MDK-ARM/STM32F429I_DISCO_REV_D01.uvprojx` |
+| **Makefile / GCC** | `cd gcc && make` (cần `arm-none-eabi-gcc` trong `PATH`) |
 
-## Nhánh
+### Chỉnh sửa giao diện
 
-- `main` — luôn phải build được
-- `feat/<tên>` — tính năng mới
-- `fix/<tên>` — sửa lỗi
-
-Merge vào `main` qua Pull Request, có ít nhất một người trong nhóm review.
-
----
-
-## Kiểm thử
-
-Dự án chưa có test tự động (firmware, cần phần cứng thật). Trước khi merge, tự kiểm tra trên board theo danh sách trong [docs/HARDWARE.md § 8](docs/HARDWARE.md#8-kiểm-tra--sự-cố-thường-gặp):
-
-- [ ] Build sạch, không warning mới
-- [ ] Khởi động: LED xanh PG13 sáng
-- [ ] Cả 4 nút phản hồi đúng
-- [ ] Chuyển sang chế độ cử chỉ: LED chuyển sang đỏ PG14
-- [ ] Cả 4 cử chỉ phản hồi đúng
-- [ ] Chuyển qua lại nhiều lần: không treo, không lệnh ma
-
-Trong mô tả PR, ghi rõ bạn đã kiểm tra trên phần cứng hay chưa.
+Cần **TouchGFX Designer 4.25.0**. Mở `TouchGFX/MyApplication_2.touchgfx`, sửa, rồi bấm **Generate Code** trước khi build lại.
 
 ---
 
-## Sửa giao diện
+## 📁 Cấu trúc thư mục
 
-1. Mở `TouchGFX/MyApplication_2.touchgfx` bằng TouchGFX Designer **4.25.0**
-2. Sửa
-3. Bấm **Generate Code** — bước này bắt buộc, nếu không code sẽ không khớp với thiết kế
-4. Build lại từ IDE
-5. Commit **cả** file `.touchgfx` **và** thư mục `generated/` đi kèm
+```
+.
+├── Core/                    # Mã ứng dụng & khởi tạo ngoại vi
+│   ├── Inc/                 #   main.h, PAJ7620.h, FreeRTOSConfig.h
+│   ├── Src/                 #   main.c (task + queue), PAJ7620.c (driver), freertos.c
+│   └── Startup/             #   startup_stm32f429zitx.s
+├── TouchGFX/                # Project & mã giao diện  ⚠️ xem cảnh báo phía trên
+│   ├── gui/src/             #   View / Presenter các màn hình
+│   ├── assets/              #   Ảnh khối gạch, font, text
+│   └── MyApplication_2.touchgfx
+├── Drivers/                 # STM32 HAL, CMSIS, BSP (ILI9341, STMPE811)
+├── Middlewares/             # TouchGFX, FreeRTOS
+├── STM32CubeIDE/            # Project STM32CubeIDE
+├── EWARM/                   # Project IAR EWARM
+├── MDK-ARM/                 # Project Keil uVision
+├── gcc/                     # Makefile build bằng arm-none-eabi-gcc
+├── docs/                    # Tài liệu chi tiết
+└── STM32F429I_DISCO_REV_D01.ioc   # Cấu hình STM32CubeMX
+```
+
+> `Core/Src/main.c` là file trung tâm: chứa khai báo task, queue, `StartTask03`, `StartTask04`, `StartDefaultTask` và `updateTasksBasedOnMode()`.
 
 ---
 
-## Thêm nguồn điều khiển mới
+## 📚 Tài liệu
 
-Kiến trúc đã được thiết kế cho việc này (xem [ARCHITECTURE.md § 10](docs/ARCHITECTURE.md#10-hướng-mở-rộng)):
+| Tài liệu | Nội dung |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Chi tiết task, queue, cơ chế suspend/resume, luồng dữ liệu |
+| [docs/HARDWARE.md](docs/HARDWARE.md) | Sơ đồ nối dây đầy đủ, cấu hình ngoại vi, danh sách linh kiện |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Quy ước code, commit, quy trình đóng góp |
+| [CHANGELOG.md](CHANGELOG.md) | Lịch sử thay đổi |
 
-1. Thêm giá trị vào enum `SystemMode` trong `main.c`
-2. Tạo task mới, đẩy byte `'L'`/`'R'`/`'D'`/`'C'` vào `Queue1Handle`
-3. Thêm nhánh `case` vào `updateTasksBasedOnMode()` — nhớ suspend các task khác
-4. Cập nhật GUI để gửi giá trị chế độ mới vào `Queue2Handle`
+---
 
-**Không sửa logic game.** Nếu bạn thấy mình phải sửa nó để thêm nguồn điều khiển, nghĩa là lớp trừu tượng đã bị phá vỡ ở đâu đó.
+## 🐛 Xử lý sự cố
+
+| Hiện tượng | Nguyên nhân & cách xử lý |
+|---|---|
+| Build lỗi *"No such file: gui/…"* | Thiếu thư mục `TouchGFX/` — xem [cảnh báo](#-giới-thiệu) ở đầu README |
+| Build lỗi sau khi sửa UI | Mở `.touchgfx` và **Generate Code** lại từ TouchGFX Designer |
+| Không nạp được firmware | Kiểm tra cáp ST-Link và nguồn cấp; thử `Run → Debug Configurations` và chọn đúng file `.launch` |
+| Cử chỉ không nhận | Kiểm tra dây I²C3 (PA8/PC9) và điện trở kéo lên; xác nhận sensor trả đúng Part ID tại địa chỉ `0x73` |
+| Nút không phản hồi | Nút là **active-HIGH** — kiểm tra điện trở kéo **xuống** ở PG2/PG3/PB12/PB13 |
+| Lệnh bị lặp / nhảy nhiều ô | Đúng thiết kế: cửa sổ `osDelay(400)` giới hạn tốc độ lặp. Chỉnh trong `StartTask03`/`StartTask04` nếu muốn |
+| Màn hình đen, đèn nguồn vẫn sáng | SDRAM chưa init xong → kiểm tra `MX_FMC_Init()` và cấu hình CAS latency |
+
+---
+
+## 📄 Giấy phép
+
+Mã nguồn do nhóm viết (`Core/`, `TouchGFX/gui/`) phát hành theo giấy phép [MIT](LICENSE).
+
+Mã của bên thứ ba giữ nguyên giấy phép gốc:
+
+- **STM32 HAL, CMSIS, BSP** — STMicroelectronics (xem `Drivers/*/LICENSE.txt`)
+- **FreeRTOS** — MIT
+- **TouchGFX** — ST Ultimate Liberty License (SLA0044)
+- **Material Icons** — Apache 2.0 (`TouchGFX/MATERIAL-ICONS-LICENSE`)
