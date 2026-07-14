@@ -1,0 +1,77 @@
+# ==========================================================================
+#  STM32 / TouchGFX project .gitignore
+#  Bỏ qua các file build, sinh tự động và cấu hình cục bộ của IDE.
+# ==========================================================================
+
+# --- Build artifacts chung (GCC / arm-none-eabi) ---
+*.o
+*.obj
+*.d
+*.su
+*.elf
+*.bin
+*.hex
+*.srec
+*.map
+*.list
+*.lst
+*.a
+*.la
+*.lo
+
+# --- Thư mục build ---
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+Objects/
+Listings/
+Exe/
+Obj/
+List/
+DebugConfig/
+gcc/build/
+
+# --- STM32CubeIDE ---
+.settings/
+.metadata/
+STM32CubeIDE/Debug/
+STM32CubeIDE/Release/
+
+# --- STM32CubeMX ---
+# .mxproject là cache của CubeMX, có thể sinh lại từ file .ioc
+.mxproject
+
+# --- EWARM (IAR) ---
+EWARM/settings/
+EWARM/**/Obj/
+EWARM/**/List/
+EWARM/**/Exe/
+EWARM/**/BrowseInfo/
+*.dep
+*.ewt
+
+# --- MDK-ARM (Keil uVision) ---
+MDK-ARM/Objects/
+MDK-ARM/Listings/
+MDK-ARM/DebugConfig/
+MDK-ARM/RTE/
+*.uvguix.*
+*.uvoptx.bak
+*.bak
+*.scvd
+JLink*.log
+*.i.c
+
+# --- TouchGFX ---
+TouchGFX/build/
+TouchGFX/simulator/build/
+TouchGFX/simulator/*.exe
+*.o.tmp
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
