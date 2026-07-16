@@ -77,11 +77,10 @@ Giao diện dựng bằng **TouchGFX** trên LCD 240×320 (ILI9341), tăng tốc
 
 | Task | Vai trò |
 |---|---|
-| `GUI_Task` | Chạy vòng lặp TouchGFX, vẽ màn hình và xử lý logic Tetris. Đọc lệnh từ **Queue1**, gửi lựa chọn chế độ vào **Queue2**. |
-| `myTask03` | Quét 4 nút bấm mỗi 10 ms, đẩy lệnh vào **Queue1**. Mặc định **đang chạy**. |
-| `myTask04` | Đọc cử chỉ từ PAJ7620 mỗi 10 ms, đẩy lệnh vào **Queue1**. Mặc định **bị suspend**. |
-| `defaultTask` | Nhận chế độ từ **Queue2**, suspend/resume Task03 ↔ Task04, bật LED báo chế độ. |
-
+| `GUI_Task` | Vận hành giao diện TouchGFX, hiển thị màn hình và xử lý toàn bộ logic Tetris. Task nhận lệnh điều khiển từ **Queue1** và gửi chế độ được chọn sang **Queue2**. |
+| `myTask03` | Quét trạng thái của 4 nút bấm theo chu kỳ 10 ms, chuyển thao tác thành lệnh và gửi vào **Queue1**. Đây là task điều khiển mặc định khi hệ thống khởi động. |
+| `myTask04` | Đọc và nhận diện cử chỉ từ cảm biến PAJ7620 theo chu kỳ 10 ms, sau đó gửi lệnh tương ứng vào **Queue1**. Task này mặc định được tạm dừng. |
+| `defaultTask` | Theo dõi chế độ điều khiển từ **Queue2**, thực hiện chuyển đổi giữa `myTask03` và `myTask04` bằng cơ chế suspend/resume, đồng thời cập nhật LED để báo chế độ đang hoạt động. |
 ### Giao thức message queue
 
 **Queue1 — lệnh điều khiển** (8 phần tử, `uint8_t`). Lệnh mã hoá bằng ký tự ASCII:
