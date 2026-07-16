@@ -1,0 +1,33 @@
+# EditorConfig — https://editorconfig.org
+# Giữ style thống nhất giữa STM32CubeIDE, Keil, IAR và VS Code.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Mã nguồn C/C++ — theo style của code sinh bởi STM32CubeMX
+[*.{c,h,cpp,hpp}]
+indent_size = 2
+max_line_length = 120
+
+# Assembly khởi động
+[*.s]
+indent_size = 2
+
+# Makefile bắt buộc dùng tab
+[{Makefile,*.mk}]
+indent_style = tab
+
+[*.{md,yml,yaml,json,xml}]
+indent_size = 2
+
+# File do IDE / TouchGFX Designer sinh ra — không đụng vào
+[{*.ioc,*.touchgfx,*.uvprojx,*.uvoptx,*.ewp,*.ewd,*.eww,.cproject,.project}]
+trim_trailing_whitespace = false
+insert_final_newline = false
