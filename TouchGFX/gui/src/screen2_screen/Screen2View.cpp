@@ -2,6 +2,8 @@
 #include "cmsis_os2.h"
 #include "main.h" 
 
+// Hàng đợi chọn chế độ điều khiển, đọc bởi StartDefaultTask trong main.c.
+// Giá trị 0 = điều khiển bằng nút bấm (Task03), 1 = điều khiển bằng cử chỉ tay (Task04).
 extern osMessageQueueId_t Queue2Handle;
 
 Screen2View::Screen2View()
@@ -19,28 +21,35 @@ void Screen2View::tearDownScreen()
     Screen2ViewBase::tearDownScreen();
 }
 
+// Chọn chế độ điều khiển bằng NÚT BẤM.
+// Được gọi từ interaction của nút trong TouchGFX Designer; chỉ gửi yêu cầu qua queue,
+// việc bật/tắt task do StartDefaultTask bên main.c thực hiện.
 void Screen2View::turnOnMode1()
 {
     // Implementation for turning on mode 1
-    uint8_t mode = 0; 
+    uint8_t mode = 0;
     uint32_t count = osMessageQueueGetCount(Queue2Handle);
-    if (count < 1) 
+    // Chỉ gửi khi queue rỗng để tránh dồn lệnh nếu người dùng bấm nút liên tục
+    if (count < 1)
     {
         osMessageQueuePut(Queue2Handle, &mode, 0, 10);
     }
 }
 
+// Chọn chế độ điều khiển bằng CỬ CHỈ TAY (cảm biến PAJ7620).
 void Screen2View::turnOnMode2()
 {
     // Implementation for turning on mode 2
-    uint8_t mode = 1; 
+    uint8_t mode = 1;
     uint32_t count = osMessageQueueGetCount(Queue2Handle);
-    if (count < 1) 
+    if (count < 1)
     {
         osMessageQueuePut(Queue2Handle, &mode, 0, 10);
     }
 }
 
+// Hiệu ứng động của màn hình chọn chế độ: 3 ảnh lần lượt biến mất rồi lần lượt hiện lại,
+// tạo vòng lặp nhấp nháy chu kỳ 18 tick. Mỗi pha cách nhau 3 tick.
 void Screen2View::handleTickEvent()
 {
     tickCount++;
